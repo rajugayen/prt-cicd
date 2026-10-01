@@ -1,0 +1,94 @@
+---
+- name: Configure ci-master
+  hosts: ci_master
+  become: true
+  tasks:
+    - name: Install Java and prerequisites
+      apt:
+        name:
+          - openjdk-21-jre
+          - curl
+          - gnupg
+          - ca-certificates
+          - fontconfig
+        state: present
+        update_cache: true
+
+    - name: Install Jenkins repository key
+      get_url:
+        url: https://pkg.jenkins.io/debian-stable/jenkins.io-2026.key
+        dest: /usr/share/keyrings/jenkins-keyring.asc
+        mode: '0644'
+
+    - name: Add Jenkins repository
+      apt_repository:
+        repo: "deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc] https://pkg.jenkins.io/debian-stable binary/"
+        filename: jenkins
+        state: present
+
+    - name: Install Jenkins
+      apt:
+        name: jenkins
+        state: present
+        update_cache: true
+
+    - name: Enable and start Jenkins
+      systemd:
+        name: jenkins
+        enabled: true
+        state: started
+
+    - name: Verify Java
+      command: java -version
+      register: java_version
+      changed_when: false
+
+    - name: Verify Jenkins
+      command: systemctl is-active jenkins
+      register: jenkins_status
+      changed_when: false
+
+    - name: Show Jenkins status
+      debug:
+        msg: "Jenkins status: {{ jenkins_status.stdout }}"
+
+- name: Configure ci-agent
+  hosts: ci_agent
+  become: true
+  tasks:
+    - name: Install Java and Docker prerequisites
+      apt:
+        name:
+          - openjdk-21-jre
+          - ca-certificates
+          - curl
+          - gnupg
+        state: present
+        update_cache: true
+
+    - name: Install Docker
+      apt:
+        name: docker.io
+        state: present
+
+    - name: Enable and start Docker
+      systemd:
+        name: docker
+        enabled: true
+        state: started
+
+    - name: Add ubuntu user to docker group
+      user:
+        name: ubuntu
+        groups: docker
+        append: true
+
+    - name: Verify Docker
+      command: docker --version
+      register: docker_version
+      changed_when: false
+
+    - name: Verify Java
+      command: java -version
+      register: java_version
+      changed_when: false
