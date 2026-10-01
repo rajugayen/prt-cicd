@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: prt-web
-          image: YOUR_DOCKERHUB_USERNAME/prt-cicd:latest
+          image: rajugayen/prt-cicd:latest
           ports:
             - containerPort: 80
           readinessProbe:
